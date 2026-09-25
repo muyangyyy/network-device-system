@@ -1,0 +1,92 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: network-device-mysql
+    restart: always
+    # 公网部署安全默认：不对宿主机暴露 3306（backend 经容器网络直连 mysql:3306）。
+    # 需要本机调试时临时加回：ports: ["127.0.0.1:3306:3306"]，远程管理走 SSH 隧道。
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-network_device}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - network-device-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: network-device-redis
+    restart: always
+    # 公网部署安全默认：不对宿主机暴露 6379（backend 经容器网络直连 redis:6379）。
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - network-device-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: network-device-backend
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-network_device}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      # 注意：Spring Boot 3 的 Redis 配置前缀是 spring.data.redis.*（2.x 的 spring.redis.* 已移除），
+      # 因此环境变量必须写 SPRING_DATA_REDIS_HOST，写成 SPRING_REDIS_HOST 会被静默忽略
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-networkDeviceSystemSecretKey2026VeryLongAndSecureKey}
+      FILE_UPLOAD_PATH: /app/uploads
+      TZ: Asia/Shanghai
+    volumes:
+      - upload_data:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - network-device-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: network-device-frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - network-device-net
+
+volumes:
+  mysql_data:
+  redis_data:
+  upload_data:
+
+networks:
+  network-device-net:
+    driver: bridge

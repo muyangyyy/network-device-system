@@ -1,0 +1,159 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
+
+a {
+  color: $primary-color;
+  text-decoration: none;
+}
+
+// Scrollbar
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #ddd;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+// Layout
+.app-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+.sidebar-container {
+  width: $sidebar-width;
+  height: 100%;
+  background-color: $bg-sidebar;
+  transition: width 0.28s;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &.is-collapsed {
+    width: $sidebar-collapsed-width;
+  }
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.navbar {
+  height: $navbar-height;
+  background: $bg-white;
+  box-shadow: $box-shadow-light;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.tags-view-container {
+  height: $tagsview-height;
+  background: $bg-white;
+  border-bottom: 1px solid $border-lighter;
+}
+
+.app-main {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: $bg-color;
+}
+
+// Page header
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+// Search form
+.search-form {
+  padding: 18px 18px 0 18px;
+  background: $bg-white;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+// Table container
+.table-container {
+  background: $bg-white;
+  border-radius: 4px;
+  padding: 18px;
+}
+
+// Card styles
+.stat-card {
+  height: 120px;
+  border-radius: 4px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+
+  .stat-info {
+    .stat-title {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+    }
+  }
+  .stat-icon {
+    font-size: 48px;
+    opacity: 0.6;
+  }
+}
+
+// Transition
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// Dialog styles
+.el-dialog {
+  border-radius: 8px;
+}
+
+// Pagination
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+// Status tag colors
+.el-tag--success { --el-tag-bg-color: #f0f9eb; --el-tag-border-color: #e1f3d8; --el-tag-text-color: #67c23a; }
+.el-tag--warning { --el-tag-bg-color: #fdf6ec; --el-tag-border-color: #faecd8; --el-tag-text-color: #e6a23c; }
+.el-tag--danger { --el-tag-bg-color: #fef0f0; --el-tag-border-color: #fde2e2; --el-tag-text-color: #f56c6c; }
+.el-tag--info { --el-tag-bg-color: #f4f4f5; --el-tag-border-color: #e9e9eb; --el-tag-text-color: #909399; }

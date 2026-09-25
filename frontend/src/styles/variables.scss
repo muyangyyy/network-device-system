@@ -1,0 +1,49 @@
+// Primary colors
+$primary-color: #409eff;
+$success-color: #67c23a;
+$warning-color: #e6a23c;
+$danger-color: #f56c6c;
+$info-color: #909399;
+
+// Background colors
+$bg-color: #f0f2f5;
+$bg-white: #ffffff;
+$bg-sidebar: #001529;
+$bg-sidebar-active: #1890ff;
+
+// Text colors
+$text-primary: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #c0c4cc;
+
+// Border colors
+$border-base: #dcdfe6;
+$border-light: #e4e7ed;
+$border-lighter: #ebeef5;
+
+// Layout
+$sidebar-width: 220px;
+$sidebar-collapsed-width: 64px;
+$navbar-height: 50px;
+$tagsview-height: 34px;
+
+// Shadow
+$box-shadow-base: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+$box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.12);
+
+// Device status colors
+$device-status-normal: #67c23a;
+$device-status-fault: #f56c6c;
+$device-status-idle: #e6a23c;
+$device-status-scrapped: #909399;
+$device-status-maintenance: #409eff;
+
+// Repair status colors
+$repair-status-pending: #e6a23c;
+$repair-status-assigned: #409eff;
+$repair-status-processing: #9b59b6;
+$repair-status-completed: #67c23a;
+$repair-status-accepted: #2ecc71;
+$repair-status-rejected: #f56c6c;
+$repair-status-cancelled: #909399;

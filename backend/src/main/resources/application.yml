@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/network_device?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: root123
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+
+mybatis-plus:
+  type-aliases-package: com.network.device.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    # 这里原先配置了 log-impl: org.apache.ibatis.logging.stdout.StdOutImpl。
+    # 该实现会绕过日志框架、无条件把每条 SQL 及其参数直接写到 stdout：
+    # 既无法通过 logging.level 关闭，也会在生产日志里留下全部查询参数（含手机号、邮箱等）。
+    # 移除后 MyBatis 回落到 slf4j，SQL 日志由下面的 logging.level 统一控制。
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+jwt:
+  secret: networkDeviceSystemSecretKey2026VeryLongAndSecureKey
+  expiration: 86400000
+
+file:
+  upload-path: ./uploads
+  max-size: 10MB
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+logging:
+  level:
+    com.network.device: info
+    # 需要排查 SQL 时临时改为 debug（MyBatis 会以 DEBUG 级别输出 SQL 与参数）：
+    # com.network.device.mapper: debug

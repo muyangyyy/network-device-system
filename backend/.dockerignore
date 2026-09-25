@@ -1,0 +1,9 @@
+target/
+.mvn/
+.mvn/wrapper/
+.idea/
+*.iml
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
