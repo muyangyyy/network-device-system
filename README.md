@@ -125,37 +125,27 @@ cd frontend && npm install && npm run dev
 
 首次登录后请修改默认密码。
 
-## 线上部署（飞牛 NAS 实录）
+## 生产部署
 
-本项目已部署到飞牛 NAS（117.159.223.35），部署目录 `/vol2/1000/Docker/network-device-system/`，2026-09 全链路验证通过。
+支持任意可运行 Docker 的主机（Linux / NAS / 云服务器）：
 
-| 服务 | 地址 | 说明 |
-|------|------|------|
-| 前端 | http://117.159.223.35:8088 | nginx 容器，宿主机 8088→容器 80（80 被飞牛系统占用，故用 8088） |
-| 后端 API | http://117.159.223.35:8080/api | 经前端 nginx `/api` 反代亦可访问 |
-| 接口文档 | http://117.159.223.35:8080/doc.html | knife4j |
-
-登录账号同上（admin / admin123）。
-
-**安全默认**：mysql/redis 容器不对宿主机暴露端口（backend 经 Docker 内部网络直连），如需本机调试数据库，临时在 `docker-compose.yml` 给 mysql 加 `ports: ["127.0.0.1:3306:3306"]`，远程管理走 SSH 隧道。`.env`（含 `MYSQL_ROOT_PASSWORD`、`JWT_SECRET`，chmod 600）位于部署目录，`cat .env` 查看。
-
-**维护命令**（SSH 登录后）：
 ```bash
-cd /vol2/1000/Docker/network-device-system
-sudo docker compose ps          # 容器状态
-sudo docker compose logs -f backend   # 后端日志
-./deploy.sh stop | down | reset # 停止 / 删容器留卷 / 清数据
+cp .env.example .env          # 修改 MYSQL_ROOT_PASSWORD 与 JWT_SECRET
+./deploy.sh                   # 一键构建并启动（Windows 用 deploy.bat）
 ```
 
-**重建后端**（改代码后）：
+- mysql / redis 容器默认**不对外暴露端口**（backend 经 Docker 内部网络直连），公网部署安全默认
+- 数据库首次启动自动执行 `backend/src/main/resources/db/init.sql`（建表 + 种子数据）
+- 详细的更新部署、数据库迁移、运维与回滚步骤见 [`部署步骤手册.md`](./部署步骤手册.md)
+
+**重建单个服务**（改代码后）：
 ```bash
 sudo docker compose build backend && sudo docker compose up -d backend
 ```
 
 **已知环境事项**：
-- NAS 无公网拉取 Docker Hub 极慢，`/etc/docker/daemon.json` 已配 daocloud/rat.dev/1panel 三个镜像加速（备份 `.bak`）。
+- Docker Hub 拉取慢时可在 `/etc/docker/daemon.json` 配置镜像加速。
 - 后端镜像构建用阿里云 Maven 镜像（见 `backend/Dockerfile`），前端 `npm ci` 走 npmmirror。
-- NAS 系统时钟：2026-09-25 复查已通过 NTP 自动校准（`System clock synchronized: yes`，与本地时间秒级一致），此前「快约 17 小时」的偏移已消除，日志时间戳可直接使用。
 
 ## 项目结构
 
@@ -196,48 +186,9 @@ network-device-system/
 ├── deploy.bat                        # 一键部署脚本（Windows）
 ├── .env.example                      # 部署配置模板（首次运行自动复制为 .env）
 ├── docker-compose.yml
-├── 代码审查与部署优化说明.md          # 逐轮代码审查记录（问题定位 / 修复 / 验证）
+├── 部署步骤手册.md                    # 生产部署完整步骤（更新部署/数据库迁移/运维回滚）
 └── README.md
 ```
-
-## 已修复问题
-
-下表是早期版本经代码审查确认的真实缺陷，**当前代码均已修复**，保留在此便于对照回归：
-
-| 级别 | 模块 | 问题 | 现状 |
-|------|------|------|------|
-| 高 | 设备分组 | 前端调用 `/groups/*`，后端映射为 `/api/device-groups/*`，分组功能全部 404 | 前后端统一为 `/device-groups` |
-| 高 | 操作日志 | 前端调用 `/api/system-logs`，后端缺少对应的 Controller，日志页无数据 | 已补 `SystemLogController` |
-| 高 | 数据统计 | 6 个统计接口的返回结构与前端类型定义不一致，图表无法渲染 | 7 个接口的 VO 字段与 `api/statistics.ts` 逐字段对齐 |
-| 中 | 设备导入 | 前端以 multipart 上传，后端接收 JSON 数组，导入必然失败 | 后端改为 `@RequestParam MultipartFile` |
-| 中 | 数据导出 | 前端按 blob 接收，后端返回 JSON，导出失败 | 后端改为 EasyExcel 直接写响应流 |
-| 中 | 字典项 | 前端 `/dicts/{dictId}/items/{itemId}`，后端 `/dicts/items/{id}`，路径不一致 | 统一为 `/dicts/{dictType}/items` + `/dicts/items/{id}` |
-| 中 | 工单附件 | 前端调用 `/repairs/{id}/attachments` 与 `/api/upload`，后端无上传接口 | 已补 `FileController` |
-| 低 | 统计 | `StatisticsMapper.xml` 中 4 条语句无对应接口方法，属未接入的死代码 | 所有 SQL 已改为 Mapper 注解，项目内不存在 XML 映射文件 |
-| 低 | 安全 | `SecurityConfig` 放行 `/api/auth/captcha`，但该接口不存在 | 放行项已移除 |
-| 高 | 工单完成 | `completeOrder` 中 `setDeviceRepairStatus` 在 `updateById` 之后执行，`device_repair_status` 列从未持久化 | 已移到 `updateById` 之前 |
-| 中 | 工单导出 | `exportOrders` 只拷贝 4/11 个筛选字段，导出数据与页面筛选不一致 | 已补全全部 11 个字段 |
-| 中 | 用户管理 | `resetPassword` 硬编码 `"123456"` | 改为生成 8 位随机密码并返回明文 |
-| 高 | 分组 / 权限树 | 编辑分组或权限时可以把父级设成自己或自己的后代，树递归会 StackOverflowError | 改父级前做环校验，父级不存在时拒绝 |
-| 中 | 工单取消 | 取消已分配的工单后设备状态不恢复，永久卡在「故障维修」 | 取消后无其他活跃工单时自动恢复「正常」并记日志 |
-| 中 | 编号并发 | 工单号 / 设备编码「读 MAX +1 后插入」存在竞态，并发创建撞唯一键报 500 | 捕获唯一键冲突后自动重取序号重试（最多 3 次） |
-| 高 | 部门树 | 编辑部门时可以把父级设成自己或自己的后代，子部门树从树上静默消失（第十三轮树形服务修复漏网） | updateDepartment 增加环校验；创建时校验父部门存在；与分组服务同规则 |
-| 中 | 部门删除 | 删除有子部门/有用户的部门后引用悬空：子部门树消失、用户档案部门为空 | 删除前检查子部门与在用用户，存在即拒删 |
-| 中 | 权限删除 | 删除有子权限的权限后子权限 parentId 悬空，子树从权限树消失 | 删除前检查子权限，存在即拒删 |
-| 低 | 分组 / 部门编辑 | 编辑时清空「上级分组/部门」保存后父级不变（undefined 被 JSON 省略，后端跳过更新） | 提交时归一化 parentId ?? 0，0 表示顶级 |
-| 低 | 附件上传 | 后端业务异常返回 HTTP 200 + code≠200，el-upload 误报「上传成功」 | 成功回调增加业务码检查，失败显示后端消息且不 emit success |
-| 低 | 工单创建 | 设备搜索框文案称「编码或名称」但实现只按编码搜索 | 文案改为「输入设备编码搜索」 |
-| 中 | 设备编辑 | 清空「分组/负责人」保存后关联不变（undefined 被 JSON 省略，后端跳过更新；设备调组/换负责人是高频操作） | 编辑提交归一化 0 哨兵，后端 LambdaUpdateWrapper 显式 SET NULL；创建分支防御 0→NULL |
-| 中 | 用户编辑 | 清空「部门」保存后部门不变（同病，用户调岗到未分配状态无法操作） | 同款 0 哨兵 + UpdateWrapper SET NULL |
-| 低 | 分组编辑 | 清空「负责人」保存后负责人不变（同病） | 同款 0 哨兵 + UpdateWrapper SET NULL |
-| 信息 | 部门编辑 | 清空「负责人」同样清不掉，但部门更新是实体直绑（传 0 会原样写库，哨兵不可用），改造需 DTO 化整条链路 | 记录不改（低频操作），前端保持不传该字段、无写 0 风险 |
-| 中 | 错误提示 | 全站 20 处 catch 用固定文案（如「删除失败」）吞掉后端可读拒绝原因 | 统一透传 `e.message`，无消息时才显示兜底文案 |
-| 中 | 工单返修 | 返修时 set null 的完成时间/方案/结果被 updateById 的 NOT_NULL 策略跳过，返修中仍显示上一轮数据 | LambdaUpdateWrapper 显式 SET NULL |
-| 中 | 个人信息 | getCurrentUser 未填充部门名、前端类型也缺字段，「部门」永远显示「-」 | 后端查部门表填充；前端 UserInfo 补 departmentName |
-| 中 | 工单附件 | 工单详情从不组装 attachments，处理页已上传附件永远不回显 | getOrderVOById 复用 listAttachments 组装 |
-| 低 | 静默加载失败 | 13 个页面共 39 处 catch 吞掉加载错误，页面空白无提示（repair 三页之外 36 处由首次构建验证后的全项目复扫发现） | 统一透传后端消息，无消息时兜底「加载…失败」 |
-| 低 | 工单创建 | 步进表单用 `validate(callback)` 反模式产生 unhandled rejection | 统一为 try/await/catch 形态 |
-| 信息 | 构建验证 | 首次 vue-tsc 构建暴露 5 处类型错误（locale 模块无声明、log.vue 响应类型）——静态审查盲区实证 | 补 shims.d.ts 模块声明；request.get 标注 any；构建已通过（1m07s），产物 dist/ |
 
 ## 统计筛选口径
 
@@ -268,17 +219,13 @@ network-device-system/
 | 中 | 请求体直接绑定实体 | 部分接口（如 `SysDictController`）直接用实体作 `@RequestBody`，存在批量赋值风险，建议逐步改为 DTO。 |
 | 低 | 登录 / 登出操作日志 | 操作日志筛选器里的「登录 / 登出」选项当前不会有记录：登录行为记录在独立的「登录日志」页。 |
 
-> 完整的逐轮审查记录（问题定位、修复方案、验证脚本与结果）见
-> [`代码审查与部署优化说明.md`](./代码审查与部署优化说明.md)。
-
-## 系统模块
 
 | 模块 | 说明 |
 |------|------|
 | 首页驾驶舱 | 实时统计、趋势图、待办事项 |
 | 设备台账 | 设备 CRUD、状态管理、导入导出 |
 | 设备分组 | 多级分组树、分组管理 |
-| 维修工单 | 工单创建、分派、处理、验收闭环 |
+| 维修记录 | 记录创建、分派、处理、验收闭环，支持删除 |
 | 数据统计 | 维修类型、趋势、排行、效率分析 |
 | 系统管理 | 用户、角色、权限、部门、字典、日志 |
 
