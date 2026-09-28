@@ -187,6 +187,7 @@ network-device-system/
 ├── .env.example                      # 部署配置模板（首次运行自动复制为 .env）
 ├── docker-compose.yml
 ├── 部署步骤手册.md                    # 生产部署完整步骤（更新部署/数据库迁移/运维回滚）
+├── Linux部署全流程.md                 # 全新 Linux 服务器从零安装部署指南
 └── README.md
 ```
 
